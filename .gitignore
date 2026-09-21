@@ -1,0 +1,10 @@
+node_modules/
+.pnpm-store/
+.expo/
+dist/
+coverage/
+*.log
+.DS_Store
+apps/example/ios/
+apps/example/android/
+.ua

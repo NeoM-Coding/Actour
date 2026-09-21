@@ -1,0 +1,114 @@
+.coach {
+  position: fixed;
+  z-index: 1002;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+.coach--pending {
+  background: transparent;
+}
+.coach__hole {
+  position: absolute;
+  border-radius: 24rpx;
+  box-shadow: 0 0 0 2000px rgba(13, 20, 28, 0.62);
+  outline: 3rpx solid rgba(255, 255, 255, 0.9);
+  transition:
+    top 0.2s ease,
+    left 0.2s ease,
+    width 0.2s ease,
+    height 0.2s ease;
+}
+.coach__tip {
+  position: absolute;
+  width: 512rpx;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 28rpx;
+  padding: 28rpx 32rpx 24rpx;
+  box-shadow: 0 20rpx 64rpx rgba(0, 0, 0, 0.28);
+  animation: coach-in 0.15s ease;
+  transition:
+    top 0.2s ease,
+    left 0.2s ease;
+}
+@keyframes coach-in {
+  from {
+    opacity: 0;
+    transform: translateY(16rpx);
+  }
+}
+.coach__arrow {
+  position: absolute;
+  width: 20rpx;
+  height: 20rpx;
+  background: #fff;
+  transform: rotate(45deg);
+}
+.coach__arrow--up {
+  top: -10rpx;
+}
+.coach__arrow--down {
+  bottom: -10rpx;
+}
+.coach__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16rpx;
+}
+.coach__title {
+  font-size: 28rpx;
+  font-weight: 700;
+  letter-spacing: -0.5rpx;
+  color: #1d1d1f;
+}
+.coach__prog {
+  font-size: 22rpx;
+  color: #86868b;
+  white-space: nowrap;
+}
+.coach__desc {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  line-height: 1.65;
+  color: #6e6e73;
+}
+.coach__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24rpx;
+}
+.coach__skip {
+  font-size: 24rpx;
+  color: #86868b;
+  padding: 8rpx 0;
+}
+.coach__nav {
+  display: flex;
+  gap: 12rpx;
+}
+.coach__prev {
+  padding: 14rpx 24rpx;
+  border-radius: 999rpx;
+  background: #eaf4ff;
+  color: #007aff;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+.coach__next {
+  padding: 14rpx 28rpx;
+  border-radius: 999rpx;
+  background: #007aff;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+.coach__skip:active,
+.coach__prev:active,
+.coach__next:active {
+  opacity: 0.75;
+}

@@ -8,6 +8,7 @@ Interaction infrastructure for React Native applications.
 - `packages/react-native` — React Native provider and component adapters
 - `packages/guide` — guide definitions, runtime and overlay
 - `packages/devtools` — in-app interaction inspector
+- `packages/miniprogram` — WeChat Mini Program (Taro + React) tour engine with highlight hole, auto-scroll and per-step seen marks
 - `apps/example` — guided Clock alarm example
 
 ## Run the example

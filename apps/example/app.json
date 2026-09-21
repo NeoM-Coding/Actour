@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Actour Clock",
+    "slug": "actour-clock",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "dev.actour.clock" },
+    "android": { "package": "dev.actour.clock" },
+    "web": { "bundler": "metro" }
+  }
+}

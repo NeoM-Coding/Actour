@@ -1,0 +1,16 @@
+{
+  "name": "actour",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.25.0",
+  "scripts": {
+    "start": "pnpm --filter @actour/example start",
+    "ios": "pnpm --filter @actour/example ios",
+    "android": "pnpm --filter @actour/example android",
+    "web": "pnpm --filter @actour/example web",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

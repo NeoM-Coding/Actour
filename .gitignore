@@ -1,10 +1,11 @@
 node_modules/
 .pnpm-store/
 .expo/
+.swc/
 dist/
 coverage/
 *.log
 .DS_Store
-apps/example/ios/
-apps/example/android/
+apps/rn_example/ios/
+apps/rn_example/android/
 .ua

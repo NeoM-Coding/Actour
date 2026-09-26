@@ -1,0 +1,97 @@
+.guide {
+  position: fixed;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.guide--ready {
+  opacity: 1;
+}
+
+.guide__scrim {
+  position: fixed;
+  background: rgba(5, 8, 18, 0.72);
+}
+
+.guide__hole {
+  position: fixed;
+  box-sizing: border-box;
+  border: 3rpx solid rgba(255, 255, 255, 0.92);
+  border-radius: 24rpx;
+  pointer-events: none;
+  transition: all 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.guide__tip {
+  position: fixed;
+  right: 32rpx;
+  left: 32rpx;
+  padding: 28rpx 30rpx 24rpx;
+  border-radius: 28rpx;
+  background: #f7f8ff;
+  box-shadow: 0 24rpx 64rpx rgba(0, 0, 0, 0.28);
+}
+
+.guide__head,
+.guide__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guide__title {
+  color: #11162a;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+.guide__progress {
+  color: #868ca0;
+  font-size: 22rpx;
+}
+.guide__message {
+  display: block;
+  margin-top: 14rpx;
+  color: #535c78;
+  font-size: 25rpx;
+  line-height: 1.6;
+}
+.guide__foot {
+  margin-top: 24rpx;
+}
+.guide__skip {
+  color: #7a8299;
+  font-size: 24rpx;
+}
+.guide__actions {
+  position: relative;
+  min-width: 220rpx;
+  min-height: 60rpx;
+}
+.guide__hint {
+  position: absolute;
+  top: 14rpx;
+  right: 0;
+  color: #637ef2;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+.guide__next {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 14rpx 28rpx;
+  border-radius: 999rpx;
+  background: #637ef2;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+.guide__action--hidden {
+  visibility: hidden;
+  pointer-events: none;
+}

@@ -1,5 +1,7 @@
 # Actour
 
+> 历史设计草案（v1）。当前目标、交付范围与工作顺序以 [v2 设计与工作路线](Actour%20%E2%80%94%20Project%20Goal%20and%20Implementation%20Design%20v2.md)为准。
+
 > **Human-guided. Agent-driven. Application-owned.**
 
 Actour 是一套面向 React Native / React 应用的 **Interaction Infrastructure**。

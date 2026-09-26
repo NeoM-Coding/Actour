@@ -1,0 +1,26 @@
+{
+  "name": "@actour/taro",
+  "description": "Reference implementation for authoring an Actour adapter for Taro; not an officially supported platform package.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.tsx",
+  "types": "src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./guide": "./src/guide.ts",
+    "./registration": "./src/registration.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@actour/core": "workspace:*",
+    "@actour/guide": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tarojs/components": ">=3.6",
+    "@tarojs/taro": ">=3.6",
+    "react": ">=18"
+  }
+}

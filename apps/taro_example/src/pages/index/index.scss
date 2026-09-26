@@ -1,0 +1,201 @@
+.page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0 36rpx 40rpx;
+  background: #090c17;
+}
+.safe-top {
+  height: calc(env(safe-area-inset-top) + 28rpx);
+}
+.header,
+.section-head,
+.alarm-card,
+.dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.eyebrow {
+  display: block;
+  color: #66708f;
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 3rpx;
+}
+.page-title {
+  display: block;
+  margin-top: 8rpx;
+  color: #f5f7ff;
+  font-size: 64rpx;
+  font-weight: 700;
+}
+.guide-button {
+  margin: 0;
+  padding: 0 28rpx;
+  border-radius: 28rpx;
+  background: #222a48;
+  color: #afc0ff;
+  font-size: 26rpx;
+  font-weight: 700;
+  line-height: 72rpx;
+}
+.clock-card {
+  margin-top: 56rpx;
+  padding: 54rpx 0;
+  text-align: center;
+  border-radius: 48rpx;
+  background: #111626;
+}
+.time {
+  display: block;
+  color: #f7f8ff;
+  font-size: 128rpx;
+  font-weight: 200;
+  letter-spacing: -6rpx;
+}
+.date {
+  display: block;
+  margin-top: 12rpx;
+  color: #78819d;
+  font-size: 28rpx;
+}
+.section-head {
+  margin: 52rpx 0 20rpx;
+}
+.section-title {
+  color: #e9ecf8;
+  font-size: 38rpx;
+  font-weight: 700;
+}
+.count {
+  color: #66708f;
+  font-size: 26rpx;
+}
+.alarm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.alarm-card {
+  padding: 30rpx 32rpx;
+  border-radius: 36rpx;
+  background: #151a2b;
+}
+.alarm-time {
+  display: block;
+  color: #edf0fa;
+  font-size: 60rpx;
+  font-weight: 500;
+}
+.alarm-time--muted {
+  color: #575e73;
+}
+.alarm-label {
+  display: block;
+  margin-top: 6rpx;
+  color: #737c98;
+  font-size: 24rpx;
+}
+.empty-card {
+  padding: 42rpx 0;
+  text-align: center;
+  border-radius: 36rpx;
+  background: #111626;
+}
+.empty-title,
+.empty-copy {
+  display: block;
+}
+.empty-title {
+  color: #aab2c9;
+  font-weight: 700;
+}
+.empty-copy {
+  margin-top: 10rpx;
+  color: #5f6881;
+  font-size: 24rpx;
+}
+.add-button {
+  margin-top: 22rpx;
+  border: 2rpx solid #2d3553;
+  border-radius: 34rpx;
+  background: transparent;
+  color: #afc0ff;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 92rpx;
+}
+.dialog-layer {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 44rpx;
+}
+.dialog-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 6, 14, 0.76);
+}
+.dialog {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 40rpx;
+  border-radius: 44rpx;
+  background: #151a2b;
+  box-shadow: 0 28rpx 80rpx rgba(0, 0, 0, 0.45);
+}
+.dialog-title {
+  color: #f5f7ff;
+  font-size: 40rpx;
+  font-weight: 700;
+}
+.dialog-cancel {
+  color: #8ea4ff;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.field-label {
+  display: block;
+  margin: 34rpx 0 14rpx;
+  color: #7d86a0;
+  font-size: 23rpx;
+  font-weight: 700;
+}
+.time-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 24rpx;
+  border: 2rpx solid #303751;
+  border-radius: 24rpx;
+  background: #0e1322;
+}
+.time-picker__value {
+  color: #f7f8ff;
+  font-size: 58rpx;
+  font-weight: 500;
+}
+.time-picker__hint {
+  color: #7480a0;
+  font-size: 22rpx;
+}
+.label-input {
+  padding: 24rpx;
+  border-radius: 24rpx;
+  background: #0e1322;
+  color: #f7f8ff;
+  font-size: 30rpx;
+}
+.save-button {
+  margin-top: 40rpx;
+  border-radius: 28rpx;
+  background: #637ef2;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 88rpx;
+}

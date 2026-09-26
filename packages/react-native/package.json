@@ -7,7 +7,7 @@
   "types": "src/index.tsx",
   "exports": { ".": "./src/index.tsx" },
   "scripts": { "typecheck": "tsc -p tsconfig.json" },
-  "dependencies": { "@actour/core": "workspace:*" },
+  "dependencies": { "@actour/core": "workspace:*", "@actour/guide": "workspace:*" },
   "peerDependencies": { "react": ">=19", "react-native": ">=0.81" },
   "devDependencies": { "@types/react": "~19.2.2", "react": "19.2.3", "react-native": "0.86.3" }
 }

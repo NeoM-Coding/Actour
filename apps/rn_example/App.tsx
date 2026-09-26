@@ -1,6 +1,6 @@
 import React from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ActourProvider } from "@actour/react-native";
+import { ActourProvider, reactNativeGuideAdapter } from "@actour/react-native";
 import { GuideProvider } from "@actour/guide";
 import { ClockScreen } from "./src/ClockScreen";
 
@@ -10,7 +10,7 @@ export default function App() {
     // ActourProvider 提供的 registry，因此这两个 Actour Provider 不能交换位置。
     <SafeAreaProvider>
       <ActourProvider>
-        <GuideProvider>
+        <GuideProvider adapter={reactNativeGuideAdapter}>
           <ClockScreen />
         </GuideProvider>
       </ActourProvider>

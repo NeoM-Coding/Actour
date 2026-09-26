@@ -1,3 +1,16 @@
 packages:
   - apps/*
   - packages/*
+  - study-comate-web
+
+patchedDependencies:
+  '@tarojs/vite-runner@4.2.1': study-comate-web/patches/@tarojs__vite-runner@4.2.1.patch
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - '@swc/core'
+  - '@tarojs/binding'
+  - '@tarojs/cli'
+  - core-js
+  - core-js-pure
+  - esbuild

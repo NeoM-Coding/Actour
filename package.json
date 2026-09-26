@@ -4,10 +4,12 @@
   "private": true,
   "packageManager": "pnpm@10.25.0",
   "scripts": {
-    "start": "pnpm --filter @actour/example start",
-    "ios": "pnpm --filter @actour/example ios",
-    "android": "pnpm --filter @actour/example android",
-    "web": "pnpm --filter @actour/example web",
+    "start": "pnpm --filter @actour/rn-example start",
+    "ios": "pnpm --filter @actour/rn-example ios",
+    "android": "pnpm --filter @actour/rn-example android",
+    "web": "pnpm --filter @actour/rn-example web",
+    "taro:dev": "pnpm --filter @actour/taro-example dev:weapp",
+    "taro:build": "pnpm --filter @actour/taro-example build:weapp",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

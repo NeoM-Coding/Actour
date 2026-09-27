@@ -1,0 +1,32 @@
+{
+  "name": "@actour/self-drivable-example",
+  "version": "0.0.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "web": "expo start --web",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@actour/agent": "workspace:*",
+    "@actour/core": "workspace:*",
+    "@actour/guide": "workspace:*",
+    "@actour/react-native": "workspace:*",
+    "@react-navigation/native": "^7.4.1",
+    "@react-navigation/native-stack": "^7.19.2",
+    "expo": "^57.0.24",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "^4.28.0",
+    "react-native-web": "~0.21.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Actour Self-Drivable",
+    "slug": "actour-self-drivable",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.actour.selfdrivable"
+    },
+    "android": {
+      "package": "dev.actour.selfdrivable"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

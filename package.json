@@ -10,6 +10,9 @@
     "web": "pnpm --filter @actour/rn-example web",
     "taro:dev": "pnpm --filter @actour/taro-example dev:weapp",
     "taro:build": "pnpm --filter @actour/taro-example build:weapp",
+    "agent:start": "pnpm --filter @actour/self-drivable-example start",
+    "agent:ios": "pnpm --filter @actour/self-drivable-example ios",
+    "agent:test": "pnpm --filter @actour/agent test",
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {

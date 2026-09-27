@@ -9,3 +9,4 @@ coverage/
 apps/rn_example/ios/
 apps/rn_example/android/
 .ua
+apps/self_drivable_example/.env

@@ -78,6 +78,11 @@ export class Agent {
     toolExecution: "sequential" | "parallel";
   });
   subscribe(listener: (event: AgentEvent) => void): () => void;
+  readonly state: {
+    messages: unknown[];
+    isStreaming: boolean;
+    errorMessage?: string;
+  };
   prompt(input: string): Promise<void>;
 }
 

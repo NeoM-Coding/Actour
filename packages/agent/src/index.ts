@@ -17,10 +17,12 @@ export {
   AgentSession,
   createOpenAIActourAgent,
   createDeepSeekActourAgent,
+  toAgentChatMessage,
 } from "./pi-agent";
 export type {
   AgentTraceEntry,
   PiActourRunOptions,
   PiActourAgentOptions,
   OpenAIActourAgentOptions,
+  AgentChatMessage,
 } from "./pi-agent";

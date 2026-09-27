@@ -38,9 +38,25 @@ export interface AgentTraceEntry {
   data?: unknown;
 }
 
+export interface AgentChatMessage {
+  role: "system" | "user" | "assistant" | "toolResult" | string;
+  content: unknown;
+  timestamp?: number;
+  toolCallId?: string;
+  toolName?: string;
+  isError?: boolean;
+  stopReason?: string;
+  errorMessage?: string;
+  provider?: string;
+  model?: string;
+  usage?: unknown;
+}
+
 export interface PiActourRunOptions {
   requestApproval(request: ApprovalRequest): Promise<boolean>;
   onTrace?(entry: AgentTraceEntry): void;
+  /** Receives the exact model-visible transcript as messages finish. */
+  onChatMessage?(message: AgentChatMessage, history: AgentChatMessage[]): void;
 }
 
 export interface PiActourAgentOptions {
@@ -69,8 +85,45 @@ export interface OpenAIActourAgentOptions {
 
 export class AgentSession {
   readonly history: AgentTraceEntry[] = [];
+  readonly chatHistory: AgentChatMessage[] = [];
   done = false;
   constructor(readonly goal: string) {}
+}
+
+function sanitizeContent(content: unknown): unknown {
+  if (!Array.isArray(content)) return content;
+  return content.map((item) => {
+    if (!item || typeof item !== "object") return item;
+    const block = item as Record<string, unknown>;
+    if (block.type === "image") {
+      return { type: "image", mimeType: block.mimeType, omitted: true };
+    }
+    if (block.type === "thinking") {
+      return { type: "thinking", omitted: true, redacted: block.redacted === true };
+    }
+    const { thoughtSignature: _thought, textSignature: _text, ...safe } = block;
+    return safe;
+  });
+}
+
+export function toAgentChatMessage(message: unknown): AgentChatMessage {
+  const source = (message ?? {}) as Record<string, unknown>;
+  return {
+    role: typeof source.role === "string" ? source.role : "unknown",
+    content: sanitizeContent(source.content),
+    timestamp: typeof source.timestamp === "number" ? source.timestamp : undefined,
+    toolCallId:
+      typeof source.toolCallId === "string" ? source.toolCallId : undefined,
+    toolName: typeof source.toolName === "string" ? source.toolName : undefined,
+    isError: typeof source.isError === "boolean" ? source.isError : undefined,
+    stopReason:
+      typeof source.stopReason === "string" ? source.stopReason : undefined,
+    errorMessage:
+      typeof source.errorMessage === "string" ? source.errorMessage : undefined,
+    provider: typeof source.provider === "string" ? source.provider : undefined,
+    model: typeof source.model === "string" ? source.model : undefined,
+    usage: source.usage,
+  };
 }
 
 const INVOKE_PARAMETERS = Type.Object({
@@ -113,6 +166,10 @@ export class PiActourAgent {
       session.history.push(entry);
       options.onTrace?.(entry);
     };
+    const chat = (message: AgentChatMessage) => {
+      session.chatHistory.push(message);
+      options.onChatMessage?.(message, [...session.chatHistory]);
+    };
 
     const tools = this.createTools(session, trace, options);
     const agent = new Agent({
@@ -126,7 +183,8 @@ export class PiActourAgent {
       getApiKey: this.options.getApiKey,
       toolExecution: "sequential",
     });
-    agent.subscribe((event) => this.tracePiEvent(event, trace));
+    chat({ role: "system", content: ACTOUR_META_SKILL });
+    agent.subscribe((event) => this.tracePiEvent(event, trace, chat));
     trace({ type: "goal", message: goal });
     await agent.prompt(
       `${goal}\n\nCall actour_observe before acting. Use actour_get_time for relative dates. Multiple non-barrier invocations from one observation may share its version. After a cycleBarrier action, re-observe before invoking again.`,
@@ -248,6 +306,7 @@ export class PiActourAgent {
   private tracePiEvent(
     event: AgentEvent,
     trace: (entry: AgentTraceEntry) => void,
+    chat: (message: AgentChatMessage) => void,
   ) {
     const toolEvent = event as {
       type: string;
@@ -262,6 +321,9 @@ export class PiActourAgent {
         errorMessage?: string;
       };
     };
+    if (toolEvent.type === "message_end" && toolEvent.message) {
+      chat(toAgentChatMessage(toolEvent.message));
+    }
     if (toolEvent.type === "tool_execution_start") {
       trace({
         type: "tool-call",

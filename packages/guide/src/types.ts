@@ -9,6 +9,8 @@ export interface GuideStep {
   target: string;
   title: string;
   message: string;
+  /** Visual breathing room around the measured target. Platform default if omitted. */
+  highlightPadding?: number;
   advanceOn?: InteractionAction;
   /** Runs before the target is measured, for example to open a sheet containing it. */
   beforeEnter?: () => void | Promise<void>;

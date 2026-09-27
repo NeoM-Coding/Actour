@@ -17,7 +17,7 @@ export function ReactNativeGuideOverlay({
 }: GuideOverlayProps) {
   const screen = useWindowDimensions();
   const [tooltipHeight, setTooltipHeight] = useState(0);
-  const padding = 8;
+  const padding = step.highlightPadding ?? 8;
   const screenPadding = 24;
   const tooltipGap = 18;
   const box = rect

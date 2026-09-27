@@ -8,7 +8,13 @@ import {
   stringValueSchema,
   type ValueInput,
 } from "@actour/core";
-import { useCapability, useGuideFlow, usePageContext } from "@actour/guide";
+import {
+  createGuide,
+  useCapability,
+  useGuide,
+  useGuideFlow,
+  usePageContext,
+} from "@actour/guide";
 import {
   InteractionPressable,
   InteractionTextInput,
@@ -38,10 +44,44 @@ export function LeaveFormScreen() {
   const focused = useIsFocused();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const guideController = useGuide();
   const [date, setDate] = useState("");
   const [daypart, setDaypart] = useState<Daypart | "">("");
   const [reason, setReason] = useState("");
   const valid = Boolean(date && daypart && reason.trim());
+  const inspectionGuide = useMemo(
+    () =>
+      createGuide({
+        id: "leave.form.visual-inspection",
+        steps: [
+          {
+            target: "leave.date",
+            title: "选择请假日期",
+            message: "填写具体日期。这个步骤使用零 padding，可直接检查测量边界。",
+            highlightPadding: 0,
+          },
+          {
+            target: "leave.daypart.afternoon",
+            title: "选择下午",
+            message: "请假时段选择下午。高亮应与按钮边界完全重合。",
+            highlightPadding: 0,
+          },
+          {
+            target: "leave.reason",
+            title: "填写请假原因",
+            message: "补充简洁、真实的请假说明。",
+            highlightPadding: 0,
+          },
+          {
+            target: "leave.submit",
+            title: "确认并提交",
+            message: "检查申请摘要后，再决定是否提交。",
+            highlightPadding: 0,
+          },
+        ],
+      }),
+    [],
+  );
   const page = useMemo(
     () => ({
       id: "leave.form",
@@ -83,6 +123,12 @@ export function LeaveFormScreen() {
         pageId: "leave.form",
         role: "selector",
         description: "设置请假时段",
+        metadata: {
+          presentationTargets: {
+            morning: "leave.daypart.morning",
+            afternoon: "leave.daypart.afternoon",
+          },
+        },
         actions: {
           input: {
             inputSchema: DAYPART_SCHEMA,
@@ -107,6 +153,14 @@ export function LeaveFormScreen() {
     <View style={styles.screen}>
       <Text style={styles.eyebrow}>PAGE CONTEXT · LEAVE.FORM</Text>
       <Text style={styles.title}>填写申请</Text>
+      <InteractionPressable
+        interactionId="leave.guide.start"
+        interactionLabel="检查 Guide 定位"
+        style={styles.guideButton}
+        onPress={() => guideController.start(inspectionGuide)}
+      >
+        <Text style={styles.guideButtonText}>检查 Guide 定位</Text>
+      </InteractionPressable>
       <Text style={styles.label}>日期</Text>
       <InteractionTextInput
         interactionId="leave.date"

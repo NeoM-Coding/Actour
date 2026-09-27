@@ -54,6 +54,15 @@ export const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.45 },
   buttonText: { color: "#FFFFFF", fontWeight: "700" },
+  guideButton: {
+    alignSelf: "flex-start",
+    marginTop: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 11,
+    backgroundColor: "#232D4C",
+  },
+  guideButtonText: { color: "#B9C5EC", fontSize: 12, fontWeight: "700" },
   success: {
     marginTop: 50,
     color: "#80D8A5",

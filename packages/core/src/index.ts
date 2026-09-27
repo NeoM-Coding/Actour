@@ -35,6 +35,8 @@ export type {
   CompletionDescriptor,
   ActourObservation,
   CapabilityInvocation,
+  AgentExecutionPhase,
+  AgentExecutionState,
 } from "./semantic-types";
 export { EMPTY_OBJECT_SCHEMA } from "./semantic-types";
 export { stringValueSchema, enumValueSchema } from "./semantic-types";

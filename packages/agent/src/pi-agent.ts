@@ -17,7 +17,11 @@ import {
 import { Type } from "typebox";
 import { ActourContextCompiler } from "./compiler";
 import { ACTOUR_META_SKILL } from "./meta-skill";
-import type { ApprovalRequest, ToolExecutionResult } from "./tools";
+import type {
+  ApprovalRequest,
+  ExecutionPresentationOptions,
+  ToolExecutionResult,
+} from "./tools";
 import {
   ApprovalController,
   getActourTimeContext,
@@ -68,6 +72,7 @@ export interface PiActourAgentOptions {
   clock?: () => Date;
   timeZone?: string;
   locale?: string;
+  executionPresentation?: ExecutionPresentationOptions;
 }
 
 export interface OpenAIActourAgentOptions {
@@ -81,6 +86,7 @@ export interface OpenAIActourAgentOptions {
   clock?: () => Date;
   timeZone?: string;
   locale?: string;
+  executionPresentation?: ExecutionPresentationOptions;
 }
 
 export class AgentSession {
@@ -156,6 +162,7 @@ export class PiActourAgent {
       runtime,
       new ApprovalController(),
       this.debugScope.debugger,
+      options.executionPresentation,
     );
   }
 
@@ -388,6 +395,7 @@ export function createOpenAIActourAgent(
     clock: options.clock,
     timeZone: options.timeZone,
     locale: options.locale,
+    executionPresentation: options.executionPresentation,
   });
 }
 

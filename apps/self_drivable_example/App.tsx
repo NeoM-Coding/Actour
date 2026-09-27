@@ -2,7 +2,11 @@ import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { ActourProvider, reactNativeGuideAdapter } from "@actour/react-native";
+import {
+  ActourProvider,
+  AgentExecutionOverlay,
+  reactNativeGuideAdapter,
+} from "@actour/react-native";
 import { GuideProvider } from "@actour/guide";
 import { AgentPanel } from "./src/AgentPanel";
 import { HomeScreen } from "./src/screens/HomeScreen";
@@ -62,6 +66,7 @@ export default function App() {
       <ActourProvider debug={debug}>
         <GuideProvider adapter={reactNativeGuideAdapter}>
           <Application />
+          <AgentExecutionOverlay />
         </GuideProvider>
       </ActourProvider>
     </SafeAreaProvider>

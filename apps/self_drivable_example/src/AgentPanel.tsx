@@ -94,6 +94,11 @@ export function AgentPanel() {
         apiKey: modelConfig.apiKey,
         model: modelConfig.model,
         debugger: debugScope.debugger,
+        executionPresentation: {
+          mode: "progressive",
+          prepareMs: 100,
+          settleMs: 180,
+        },
       });
       debugScope.debugger.log("agent run started", {
         provider: `pi-agent-core/${modelProvider}`,

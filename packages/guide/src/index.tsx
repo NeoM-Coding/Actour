@@ -31,6 +31,7 @@ export {
   useGuideFlow,
   useConstraint,
   useCompletionCriterion,
+  useAgentExecutionState,
 } from "./semanticHooks";
 export { useInteractionRegistration } from "./useInteractionRegistration";
 export type { InteractionMetadata } from "./useInteractionRegistration";

@@ -151,6 +151,53 @@ describe("ActourRuntime", () => {
 });
 
 describe("ToolExecutor", () => {
+  it("presents progressive phases without changing observation versions", async () => {
+    const runtime = new ActourRuntime();
+    runtime.registerPage({ id: "form" });
+    runtime.setActivePage("form");
+    runtime.registerCapability({
+      id: "form.reason",
+      pageId: "form",
+      description: "Reason",
+      metadata: { presentationTarget: "form.reason.input" },
+      actions: {
+        input: { inputSchema: VALUE_SCHEMA, execute: () => undefined },
+      },
+    });
+    const phases: Array<string | null> = [];
+    const sequences: number[] = [];
+    runtime.subscribeAgentExecution(() =>
+      phases.push(runtime.getAgentExecutionState()?.phase ?? null),
+    );
+    runtime.subscribeAgentExecution(() => {
+      const sequence = runtime.getAgentExecutionState()?.sequence;
+      if (sequence !== undefined) sequences.push(sequence);
+    });
+    const sleeps: number[] = [];
+    const executor = new ToolExecutor(runtime, undefined, undefined, {
+      mode: "progressive",
+      prepareMs: 10,
+      settleMs: 20,
+      sleep: async (milliseconds) => {
+        sleeps.push(milliseconds);
+      },
+    });
+    const observation = await runtime.observe();
+    executor.beginCycle(observation);
+
+    await executor.execute({
+      target: "form.reason",
+      action: "input",
+      arguments: { value: "rest" },
+      observationVersion: observation.version,
+    });
+
+    expect(phases).toEqual(["preparing", "executing", "committed", null]);
+    expect(new Set(sequences).size).toBe(1);
+    expect(sleeps).toEqual([10, 20]);
+    expect(runtime.currentVersion).toBe(observation.version + 1);
+  });
+
   it("shares an observation lease until a cycle barrier closes it", async () => {
     const runtime = new ActourRuntime();
     runtime.registerPage({ id: "form" });

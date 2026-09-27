@@ -17,4 +17,6 @@ export {
   useGuideFlow,
   useConstraint,
   useCompletionCriterion,
+  useAgentExecutionState,
 } from "@actour/guide";
+export { AgentExecutionOverlay } from "./AgentExecutionOverlay";

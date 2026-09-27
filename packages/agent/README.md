@@ -56,3 +56,37 @@ scope.debugger.log("form updated", formState);
 
 `log()` 执行时才读取当前 component context、page ID 和 observation version；
 flag 为 `false` 时不会触碰 `console`。
+
+## Progressive execution presentation
+
+模型仍可在一次回复中生成多个 tool calls。应用可以选择让这些调用立即执行，
+或按顺序给用户展示短促的语义焦点反馈：
+
+```ts
+const agent = createOpenAIActourAgent(runtime, {
+  apiKey,
+  model,
+  executionPresentation: {
+    mode: "progressive",
+    prepareMs: 100,
+    settleMs: 180,
+  },
+});
+```
+
+`instant` 是默认模式，不增加任何呈现等待。`progressive` 会发布
+`preparing → executing → committed/failed` 状态，但不会产生额外模型轮次，也不会
+改变 observation version。React Native 应用可将稳定挂载的
+`<AgentExecutionOverlay />` 放在 `ActourProvider` 内，用一个 pointer-transparent
+halo 展示当前目标。Reduced Motion 下 overlay 仅使用透明度反馈。
+
+虚拟 capability 可通过 metadata 把业务值映射到真实交互目标：
+
+```ts
+metadata: {
+  presentationTargets: {
+    morning: "leave.daypart.morning",
+    afternoon: "leave.daypart.afternoon",
+  },
+}
+```

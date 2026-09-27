@@ -7,6 +7,7 @@ import {
 } from "./errors";
 import type {
   ActourObservation,
+  AgentExecutionState,
   Capability,
   CapabilityDescriptor,
   CapabilityInvocation,
@@ -62,8 +63,11 @@ export class ActourRuntime {
   private constraints = new Map<string, Owned<Constraint>>();
   private completions = new Map<string, Owned<CompletionCriterion>>();
   private listeners = new Set<Listener>();
+  private executionListeners = new Set<Listener>();
   private activePageId: string | null = null;
   private version = 0;
+  private executionSequence = 0;
+  private executionState: AgentExecutionState | null = null;
   private readonly debugScope: ActourDebugScope;
 
   constructor(
@@ -86,6 +90,35 @@ export class ActourRuntime {
   subscribe(listener: Listener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  subscribeAgentExecution(listener: Listener) {
+    this.executionListeners.add(listener);
+    return () => this.executionListeners.delete(listener);
+  }
+
+  getAgentExecutionState() {
+    return this.executionState;
+  }
+
+  setAgentExecutionState(
+    state: Omit<AgentExecutionState, "sequence"> | null,
+  ) {
+    const continuesCurrentAction =
+      state !== null &&
+      state.phase !== "preparing" &&
+      this.executionState?.target === state.target &&
+      this.executionState.action === state.action &&
+      this.executionState.presentationTarget === state.presentationTarget;
+    this.executionState = state
+      ? {
+          ...state,
+          sequence: continuesCurrentAction
+            ? this.executionState!.sequence
+            : ++this.executionSequence,
+        }
+      : null;
+    this.executionListeners.forEach((listener) => listener());
   }
 
   registerPage(page: PageContext) {

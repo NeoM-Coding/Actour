@@ -80,6 +80,17 @@ export interface ActourTimeContext {
   locale: string;
 }
 
+export type ExecutionPresentationMode = "instant" | "progressive";
+
+export interface ExecutionPresentationOptions {
+  mode?: ExecutionPresentationMode;
+  /** Time for target acknowledgement before mutation. */
+  prepareMs?: number;
+  /** Time for committed state feedback before advancing. */
+  settleMs?: number;
+  sleep?: (milliseconds: number) => Promise<void>;
+}
+
 export function getActourTimeContext(
   now = new Date(),
   timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
@@ -158,6 +169,7 @@ export class ToolExecutor {
     private readonly runtime: ActourRuntime,
     readonly approvals = new ApprovalController(),
     debuggerInstance: ActourScopedDebugger = silentActourDebugger,
+    private readonly presentation: ExecutionPresentationOptions = {},
   ) {
     this.debugScope = { debugger: debuggerInstance };
   }
@@ -204,10 +216,7 @@ export class ToolExecutor {
         ),
       };
     }
-    const result = {
-      status: "executed",
-      result: await this.invoke(invocation),
-    } as const;
+    const result = await this.executePresented(invocation, capability.metadata);
     if (cycleAction?.cycleBarrier) this.closeCycle();
     return result;
   }
@@ -225,10 +234,11 @@ export class ToolExecutor {
     this.debugScope.debugger.log("agent tool approval granted", { id });
     const pending = this.approvals.take(id);
     const cycleAction = this.assertInvocationLease(pending.invocation);
-    const result = {
-      status: "executed",
-      result: await this.invoke(pending.invocation),
-    } as const;
+    const capability = this.runtime.getCapability(pending.invocation.target);
+    const result = await this.executePresented(
+      pending.invocation,
+      capability.metadata,
+    );
     if (cycleAction?.cycleBarrier) this.closeCycle();
     return result;
   }
@@ -265,6 +275,58 @@ export class ToolExecutor {
           this.cycle.observation.version,
         )
       : this.runtime.invoke(invocation);
+  }
+
+  private async executePresented(
+    invocation: CapabilityInvocation,
+    metadata?: Record<string, unknown>,
+  ): Promise<{ status: "executed"; result: unknown }> {
+    if (this.presentation.mode !== "progressive") {
+      return { status: "executed", result: await this.invoke(invocation) };
+    }
+    const sleep =
+      this.presentation.sleep ??
+      ((milliseconds: number) =>
+        new Promise<void>((resolve) => setTimeout(resolve, milliseconds)));
+    const presentationTarget = this.resolvePresentationTarget(
+      invocation,
+      metadata,
+    );
+    const state = {
+      target: invocation.target,
+      presentationTarget,
+      action: invocation.action,
+    };
+    this.runtime.setAgentExecutionState({ ...state, phase: "preparing" });
+    await sleep(this.presentation.prepareMs ?? 100);
+    this.runtime.setAgentExecutionState({ ...state, phase: "executing" });
+    try {
+      const result = await this.invoke(invocation);
+      this.runtime.setAgentExecutionState({ ...state, phase: "committed" });
+      await sleep(this.presentation.settleMs ?? 180);
+      return { status: "executed", result };
+    } catch (error) {
+      this.runtime.setAgentExecutionState({ ...state, phase: "failed" });
+      await sleep(this.presentation.settleMs ?? 180);
+      throw error;
+    } finally {
+      this.runtime.setAgentExecutionState(null);
+    }
+  }
+
+  private resolvePresentationTarget(
+    invocation: CapabilityInvocation,
+    metadata?: Record<string, unknown>,
+  ) {
+    const direct = metadata?.presentationTarget;
+    if (typeof direct === "string") return direct;
+    const value = (invocation.arguments as { value?: unknown } | null)?.value;
+    const targets = metadata?.presentationTargets;
+    if (typeof value === "string" && targets && typeof targets === "object") {
+      const mapped = (targets as Record<string, unknown>)[value];
+      if (typeof mapped === "string") return mapped;
+    }
+    return invocation.target;
   }
 
   private closeCycle() {

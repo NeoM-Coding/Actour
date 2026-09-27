@@ -11,6 +11,8 @@ export type {
   ToolExecutionResult,
   ActourToolProvider,
   ActourTimeContext,
+  ExecutionPresentationMode,
+  ExecutionPresentationOptions,
 } from "./tools";
 export {
   PiActourAgent,

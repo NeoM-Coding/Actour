@@ -144,3 +144,17 @@ export interface CapabilityInvocation {
   arguments: unknown;
   observationVersion: number;
 }
+
+export type AgentExecutionPhase =
+  | "preparing"
+  | "executing"
+  | "committed"
+  | "failed";
+
+export interface AgentExecutionState {
+  target: string;
+  presentationTarget?: string;
+  action: string;
+  phase: AgentExecutionPhase;
+  sequence: number;
+}

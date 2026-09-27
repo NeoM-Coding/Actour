@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import type {
   Capability,
   CompletionCriterion,
@@ -70,4 +70,13 @@ export function useCompletionCriterion(criterion?: CompletionCriterion) {
     runtime.registerCompletion(value),
   ).current;
   useRegistration(criterion, register, criterion?.id);
+}
+
+export function useAgentExecutionState() {
+  const runtime = useActourRuntime();
+  return useSyncExternalStore(
+    (listener) => runtime.subscribeAgentExecution(listener),
+    () => runtime.getAgentExecutionState(),
+    () => null,
+  );
 }

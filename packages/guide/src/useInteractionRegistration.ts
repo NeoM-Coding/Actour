@@ -29,14 +29,17 @@ export function useInteractionRegistration<Element>(
   };
 
   useEffect(() => {
-    const registration = registry.register({
-      id: metadata.interactionId,
-      role: metadata.interactionRole ?? "custom",
-      label: metadata.interactionLabel,
-      actions,
-      visible: false,
-      enabled,
-    }, measure);
+    const registration = registry.register(
+      {
+        id: metadata.interactionId,
+        role: metadata.interactionRole ?? "custom",
+        label: metadata.interactionLabel,
+        actions,
+        visible: false,
+        enabled,
+      },
+      measure,
+    );
     handle.current = registration;
     const cancelScheduledMeasurement = adapter.scheduleMeasurement(measure);
     const unsubscribeViewport = adapter.subscribeViewportChange(measure);
@@ -55,7 +58,12 @@ export function useInteractionRegistration<Element>(
       actions,
       enabled,
     });
-  }, [metadata.interactionRole, metadata.interactionLabel, actions.join("|"), enabled]);
+  }, [
+    metadata.interactionRole,
+    metadata.interactionLabel,
+    actions.join("|"),
+    enabled,
+  ]);
 
   return { ref, measure, registry };
 }

@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import type { GuideOverlayProps } from "@actour/guide";
 
 export function ReactNativeGuideOverlay({
@@ -30,21 +36,52 @@ export function ReactNativeGuideOverlay({
   const placeBelow =
     spaceBelow >= measuredTooltipHeight ||
     (spaceBelow >= spaceAbove && spaceAbove < measuredTooltipHeight);
-  const tooltipTop = box && placeBelow
-    ? box.top + box.height + tooltipGap
-    : box
-      ? box.top - tooltipGap - measuredTooltipHeight
-      : screen.height / 2 - measuredTooltipHeight / 2;
+  const tooltipTop =
+    box && placeBelow
+      ? box.top + box.height + tooltipGap
+      : box
+        ? box.top - tooltipGap - measuredTooltipHeight
+        : screen.height / 2 - measuredTooltipHeight / 2;
 
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
-      {box ? <>
-        <View pointerEvents="none" style={[styles.scrim, { height: box.top }]} />
-        <View pointerEvents="none" style={[styles.scrim, { top: box.top, width: box.left, height: box.height }]} />
-        <View pointerEvents="none" style={[styles.scrim, { top: box.top, left: box.left + box.width, right: 0, height: box.height }]} />
-        <View pointerEvents="none" style={[styles.scrim, { top: box.top + box.height, bottom: 0 }]} />
-        <View pointerEvents="none" style={[styles.highlight, box]} />
-      </> : <View pointerEvents="none" style={[styles.scrim, StyleSheet.absoluteFill]} />}
+      {box ? (
+        <>
+          <View
+            pointerEvents="none"
+            style={[styles.scrim, { height: box.top }]}
+          />
+          <View
+            pointerEvents="none"
+            style={[
+              styles.scrim,
+              { top: box.top, width: box.left, height: box.height },
+            ]}
+          />
+          <View
+            pointerEvents="none"
+            style={[
+              styles.scrim,
+              {
+                top: box.top,
+                left: box.left + box.width,
+                right: 0,
+                height: box.height,
+              },
+            ]}
+          />
+          <View
+            pointerEvents="none"
+            style={[styles.scrim, { top: box.top + box.height, bottom: 0 }]}
+          />
+          <View pointerEvents="none" style={[styles.highlight, box]} />
+        </>
+      ) : (
+        <View
+          pointerEvents="none"
+          style={[styles.scrim, StyleSheet.absoluteFill]}
+        />
+      )}
       <View
         onLayout={(event) => {
           const nextHeight = event.nativeEvent.layout.height;
@@ -54,7 +91,9 @@ export function ReactNativeGuideOverlay({
       >
         <View style={styles.tooltipHeader}>
           <Text style={styles.title}>{step.title}</Text>
-          <Pressable hitSlop={12} onPress={onClose}><Text style={styles.close}>×</Text></Pressable>
+          <Pressable hitSlop={12} onPress={onClose}>
+            <Text style={styles.close}>×</Text>
+          </Pressable>
         </View>
         <Text style={styles.message}>{step.message}</Text>
         {!targetReady ? (
@@ -72,14 +111,45 @@ export function ReactNativeGuideOverlay({
 }
 
 const styles = StyleSheet.create({
-  scrim: { position: "absolute", left: 0, right: 0, backgroundColor: "rgba(5, 8, 18, 0.72)" },
-  highlight: { position: "absolute", borderWidth: 2, borderColor: "#8AA8FF", borderRadius: 18, shadowColor: "#7895FF", shadowOpacity: 0.9, shadowRadius: 12 },
-  tooltip: { position: "absolute", left: 24, right: 24, padding: 18, borderRadius: 20, backgroundColor: "#F7F8FF" },
-  tooltipHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  scrim: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(5, 8, 18, 0.72)",
+  },
+  highlight: {
+    position: "absolute",
+    borderWidth: 2,
+    borderColor: "#8AA8FF",
+    borderRadius: 18,
+    shadowColor: "#7895FF",
+    shadowOpacity: 0.9,
+    shadowRadius: 12,
+  },
+  tooltip: {
+    position: "absolute",
+    left: 24,
+    right: 24,
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: "#F7F8FF",
+  },
+  tooltipHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   title: { color: "#11162A", fontSize: 18, fontWeight: "700" },
   close: { color: "#66708F", fontSize: 25 },
   message: { marginTop: 8, color: "#434B67", fontSize: 15, lineHeight: 22 },
   hint: { marginTop: 14, color: "#637EF2", fontSize: 13, fontWeight: "600" },
-  nextButton: { alignSelf: "flex-end", marginTop: 14, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12, backgroundColor: "#637EF2" },
+  nextButton: {
+    alignSelf: "flex-end",
+    marginTop: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: "#637EF2",
+  },
   nextText: { color: "white", fontWeight: "700" },
 });

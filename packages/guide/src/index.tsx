@@ -35,4 +35,9 @@ export {
 } from "./semanticHooks";
 export { useInteractionRegistration } from "./useInteractionRegistration";
 export type { InteractionMetadata } from "./useInteractionRegistration";
+export { useTargetPresentation } from "./useTargetPresentation";
+export type {
+  TargetPresentationOptions,
+  TargetPresentationState,
+} from "./useTargetPresentation";
 export type { GuideOverlayProps, GuidePlatformAdapter } from "./platform";

@@ -20,3 +20,8 @@ export {
   useAgentExecutionState,
 } from "@actour/guide";
 export { AgentExecutionOverlay } from "./AgentExecutionOverlay";
+export { TargetOverlayPrimitive } from "./TargetOverlayPrimitive";
+export type {
+  TargetOverlayBox,
+  TargetOverlayPrimitiveProps,
+} from "./TargetOverlayPrimitive";

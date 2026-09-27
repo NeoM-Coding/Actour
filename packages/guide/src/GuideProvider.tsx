@@ -7,10 +7,11 @@ import React, {
   useRef,
   useState,
 } from "react";
-import type { InteractionEvent, InteractionRect } from "@actour/core";
+import type { InteractionEvent } from "@actour/core";
 import type { GuideDefinition } from "./types";
 import type { GuidePlatformAdapter } from "./platform";
 import { useActour, useActourDebugScope } from "./registryContext";
+import { useTargetPresentation } from "./useTargetPresentation";
 
 interface GuideController {
   start: (guide: GuideDefinition) => void;
@@ -36,9 +37,7 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
   const [guide, setGuide] = useState<GuideDefinition | null>(null);
   const guideRef = useRef<GuideDefinition | null>(null);
   const [index, setIndex] = useState(0);
-  const [, refresh] = useState(0);
   const [entering, setEntering] = useState(false);
-  const [overlayRect, setOverlayRect] = useState<InteractionRect>();
   const transitioningRef = useRef(false);
   const step = guide?.steps[index];
   const debugScope = useActourDebugScope({
@@ -48,18 +47,15 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
     stepIndex: step ? index : null,
     target: step?.target ?? null,
   });
-  const target = step ? registry.get(step.target) : undefined;
-  const targetReady =
-    !entering &&
-    Boolean(
-      target?.visible && target.rect && (!step?.advanceOn || target.enabled),
-    );
-
-  // Keep the last valid rect until the next step has a valid replacement.
-  // The mounted overlay can then swap its whole presentation atomically.
-  useEffect(() => {
-    if (targetReady && target?.rect) setOverlayRect(target.rect);
-  }, [target?.rect, targetReady]);
+  const presentation = useTargetPresentation({
+    adapter,
+    target: step?.target,
+    cycleKey: step ? `${guide?.id}:${index}` : undefined,
+    active: Boolean(step) && entering,
+    requireEnabled: Boolean(step?.advanceOn),
+    prepare: step?.beforeEnter,
+  });
+  const targetReady = entering && presentation.targetReady;
 
   const finish = useCallback(
     (reason: "completed" | "skipped" | "cancelled") => {
@@ -68,7 +64,6 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
       transitioningRef.current = false;
       setGuide(null);
       setEntering(false);
-      setOverlayRect(undefined);
       debugScope.debugger.log("guide finished", {
         guideId: current?.id ?? null,
         reason,
@@ -128,7 +123,6 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
         guideRef.current = definition;
         transitioningRef.current = false;
         setEntering(true);
-        setOverlayRect(undefined);
         setIndex(0);
         setGuide(definition);
       },
@@ -139,38 +133,6 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
     }),
     [debugScope, exit],
   );
-
-  // Registry 不是 React state，内部变化不会自动触发 React 渲染。
-  // 这里订阅其变化并递增一个无业务含义的 state，主动要求 React 刷新界面。
-  // subscribe 返回取消订阅函数，React 会在 Effect 失效或组件卸载时自动调用。
-  useEffect(
-    () => registry.subscribe(() => refresh((value) => value + 1)),
-    [registry],
-  );
-
-  // Window coordinates can change during scrolling without an onLayout event.
-  // Refresh only the active target, and only while a guide is running.
-  useEffect(() => {
-    if (!step) return;
-    let cancelled = false;
-    let revealTimer: ReturnType<typeof setTimeout> | undefined;
-    setEntering(true);
-    Promise.resolve(step.beforeEnter?.())
-      .catch(() => undefined)
-      .then(() => {
-        if (cancelled) return;
-        registry.refresh(step.target);
-        revealTimer = setTimeout(() => {
-          if (!cancelled) setEntering(false);
-        }, 80);
-      });
-    const timer = setInterval(() => registry.refresh(step.target), 100);
-    return () => {
-      cancelled = true;
-      if (revealTimer) clearTimeout(revealTimer);
-      clearInterval(timer);
-    };
-  }, [registry, step]);
 
   useEffect(() => {
     if (!step?.advanceOn) return;
@@ -193,7 +155,7 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
               index,
               total: guide.steps.length,
               isLast: index === guide.steps.length - 1,
-              rect: targetReady ? target?.rect : overlayRect,
+              rect: presentation.rect,
               targetReady,
               onNext: () => void advance(),
               onClose: () => void exit("skipped"),

@@ -4,10 +4,13 @@ import {
   Animated,
   Easing,
   StyleSheet,
-  View,
 } from "react-native";
-import type { InteractionRect } from "@actour/core";
-import { useActour, useAgentExecutionState } from "@actour/guide";
+import {
+  useAgentExecutionState,
+  useGuidePlatformAdapter,
+  useTargetPresentation,
+} from "@actour/guide";
+import { TargetOverlayPrimitive } from "./TargetOverlayPrimitive";
 
 export interface AgentExecutionOverlayProps {
   color?: string;
@@ -27,12 +30,15 @@ export function AgentExecutionOverlay({
   padding = 0,
   borderRadius = 18,
 }: AgentExecutionOverlayProps) {
-  const registry = useActour();
   const execution = useAgentExecutionState();
-  const [rect, setRect] = useState<InteractionRect>();
-  const [coordinatesReady, setCoordinatesReady] = useState(false);
+  const adapter = useGuidePlatformAdapter();
+  const presentation = useTargetPresentation({
+    adapter,
+    target: execution?.presentationTarget ?? execution?.target,
+    cycleKey: execution?.sequence,
+    active: Boolean(execution),
+  });
   const [reduceMotion, setReduceMotion] = useState(false);
-  const updateCoordinatesRef = useRef<() => void>(() => undefined);
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.97)).current;
 
@@ -46,50 +52,9 @@ export function AgentExecutionOverlay({
   }, []);
 
   useEffect(() => {
-    const update = () => {
-      if (!execution) return;
-      const target = execution.presentationTarget ?? execution.target;
-      const next = registry.get(target)?.rect;
-      if (!next) return;
-      // Interaction rects are measured with measureInWindow(). Keep the
-      // presentation overlay in that same window coordinate space, exactly as
-      // ReactNativeGuideOverlay does. Safe area and navigation offsets are
-      // already included in next.x/next.y and must not be subtracted again.
-      setRect(next);
-      setCoordinatesReady(true);
-    };
-    updateCoordinatesRef.current = update;
-    setCoordinatesReady(false);
-    opacity.setValue(0);
-    const unsubscribe = registry.subscribe(update);
-    let firstFrame: number | undefined;
-    let secondFrame: number | undefined;
-    if (execution) {
-      registry.refresh(execution.presentationTarget ?? execution.target);
-      // Do not reveal a rect cached before this action (especially one measured
-      // during a navigation transition). Mirror GuideProvider's refresh-then-
-      // reveal behavior and read the settled registry value on a later frame.
-      firstFrame = requestAnimationFrame(() => {
-        secondFrame = requestAnimationFrame(update);
-      });
-    }
-    return () => {
-      unsubscribe();
-      if (firstFrame !== undefined) cancelAnimationFrame(firstFrame);
-      if (secondFrame !== undefined) cancelAnimationFrame(secondFrame);
-    };
-  }, [
-    execution?.presentationTarget,
-    execution?.sequence,
-    execution?.target,
-    opacity,
-    registry,
-  ]);
-
-  useEffect(() => {
     opacity.stopAnimation();
     scale.stopAnimation();
-    if (!execution || !coordinatesReady) {
+    if (!execution || !presentation.targetReady) {
       Animated.timing(opacity, {
         toValue: 0,
         duration: 90,
@@ -150,39 +115,38 @@ export function AgentExecutionOverlay({
       }),
     ]).start();
   }, [
-    coordinatesReady,
     execution?.phase,
     execution?.sequence,
     opacity,
+    presentation.targetReady,
     reduceMotion,
     scale,
   ]);
 
   return (
-    <View
-      collapsable={false}
+    <TargetOverlayPrimitive
+      rect={presentation.rect}
+      padding={padding}
       pointerEvents="none"
-      style={StyleSheet.absoluteFill}
-      onLayout={() => updateCoordinatesRef.current()}
     >
-      <Animated.View
-        style={[
-          styles.halo,
-          rect && {
-            left: rect.x - padding,
-            top: rect.y - padding,
-            width: rect.width + padding * 2,
-            height: rect.height + padding * 2,
-            borderRadius,
-            borderColor:
-              execution?.phase === "failed" ? errorColor : color,
-            shadowColor:
-              execution?.phase === "failed" ? errorColor : color,
-          },
-          { opacity, transform: [{ scale }] },
-        ]}
-      />
-    </View>
+      {(box) => (
+        <Animated.View
+          style={[
+            styles.halo,
+            box,
+            {
+              borderRadius,
+              borderColor:
+                execution?.phase === "failed" ? errorColor : color,
+              shadowColor:
+                execution?.phase === "failed" ? errorColor : color,
+              opacity,
+              transform: [{ scale }],
+            },
+          ]}
+        />
+      )}
+    </TargetOverlayPrimitive>
   );
 }
 

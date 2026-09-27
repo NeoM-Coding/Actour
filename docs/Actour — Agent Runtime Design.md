@@ -4,6 +4,19 @@
 > **Current milestone:** Self-Drivable Application  
 > **Core thesis:** Don't teach agents how to use every app. Teach apps how to introduce themselves to agents.
 
+## MVP implementation in this repository
+
+The first executable slice lives in `@actour/core`, `@actour/agent`, and
+`apps/self_drivable_example`. It provides semantic capability registration,
+page-scoped observations, stale-context protection, schema-validated invocation,
+human approval and completion verification. Model/tool orchestration is delegated
+to `pi-agent-core`; the React Native leave-request demo uses the OpenAI Responses
+transport from `pi-ai`. Actour does not maintain a second Agent Loop.
+
+Run it with `pnpm agent:start` and run the runtime tests with `pnpm agent:test`.
+React Native is the primary validation platform; the Taro
+adapter remains an authoring demo and regression target for this milestone.
+
 ---
 
 ## 0. How to use this document
@@ -37,15 +50,15 @@ The most important success criterion is:
 
 Actour should expose application knowledge through a unified semantic runtime:
 
-| Primitive | Question answered |
-|---|---|
-| `PageContext` | Where am I? |
-| `Capability` | What can I do? |
-| `Observation / State` | What is happening now? |
-| `GuideFlow` | How should this intent usually be completed? |
-| `Constraint` | What rules must be respected? |
-| `Completion` | How do I know the goal is complete? |
-| `Adapter` | How is an abstract interaction executed on this platform? |
+| Primitive             | Question answered                                         |
+| --------------------- | --------------------------------------------------------- |
+| `PageContext`         | Where am I?                                               |
+| `Capability`          | What can I do?                                            |
+| `Observation / State` | What is happening now?                                    |
+| `GuideFlow`           | How should this intent usually be completed?              |
+| `Constraint`          | What rules must be respected?                             |
+| `Completion`          | How do I know the goal is complete?                       |
+| `Adapter`             | How is an abstract interaction executed on this platform? |
 
 The original Human Tour use case remains important. The new direction does **not** throw Tour away.
 
@@ -336,6 +349,9 @@ export interface CapabilityAction<TInput = unknown, TResult = unknown> {
 
   // Optional v0.1 metadata; keep extensible.
   sideEffect?: "none" | "reversible" | "consequential";
+
+  // Navigation, submission, or another context-changing boundary.
+  cycleBarrier?: boolean;
 }
 
 export interface Capability {
@@ -354,6 +370,11 @@ export interface Capability {
 Important invariant:
 
 > **The agent may only invoke currently exposed and enabled capabilities.**
+
+Selector-like capabilities must publish their primitive domain in JSON Schema
+(`properties.value.enum`) and use the matching TypeScript literal union in the
+callback. Display labels are not valid business values. Core rejects a
+`role: "selector"` registration that only exposes an unconstrained string.
 
 ---
 
@@ -413,10 +434,7 @@ export interface Constraint {
   appliesTo?: string[];
 
   type?:
-    | "require-confirmation"
-    | "precondition"
-    | "forbidden"
-    | "informational";
+    "require-confirmation" | "precondition" | "forbidden" | "informational";
 }
 ```
 
@@ -459,18 +477,15 @@ Conceptually:
         inputSchema: {
           type: "object",
           properties: {
-            value: { type: "string" }
+            value: { type: "string" },
           },
-          required: ["value"]
-        }
-      }
-    }
+          required: ["value"],
+        },
+      },
+    },
   }}
 >
-  <TextInput
-    value={keyword}
-    onChangeText={setKeyword}
-  />
+  <TextInput value={keyword} onChangeText={setKeyword} />
 </InteractionTag>
 ```
 
@@ -608,14 +623,15 @@ Example:
   context="The user may have already completed some fields."
   instructions={[
     "Do not repeat completed steps.",
-    "Validate refund eligibility before submission."
+    "Validate refund eligibility before submission.",
   ]}
   constraints={[
     {
       id: "refund-confirm",
       type: "require-confirmation",
-      description: "Confirm the refund amount with the user before final submission."
-    }
+      description:
+        "Confirm the refund amount with the user before final submission.",
+    },
   ]}
 />
 ```
@@ -711,7 +727,7 @@ async function runActourTask(goal: string) {
       goal: session.goal,
       taskState: session.snapshot(),
       observation,
-      tools: toolProvider.compile(observation)
+      tools: toolProvider.compile(observation),
     });
 
     if (response.requiresHuman) {
@@ -790,6 +806,25 @@ continue with same task goal
 
 This prevents the agent from invoking stale controls after navigation.
 
+## 12.1 Observation cycle and barrier
+
+An observation opens a versioned invocation cycle. Calls that were all exposed
+by that observation may share its `observationVersion`, so a model can emit
+independent form updates together without the first update invalidating the
+rest. This is a scoped lease, not a global relaxation of stale checks: each
+target, action, enabled state, and schema must exist in the cycle snapshot and
+must still be valid in the active runtime.
+
+Actions that change execution context declare `cycleBarrier: true`. Navigation
+and consequential submission are barriers. A barrier must be the final action
+in a cycle; after it succeeds or its approval is rejected, the Agent must call
+`actour_observe` before invoking again.
+
+Relative time is external runtime context rather than model knowledge. Agents
+must call `actour_get_time` for goals containing “today”, “tomorrow”, weekdays,
+or similar expressions. The tool returns the ISO instant plus local date, time,
+weekday, timezone, and locale.
+
 ---
 
 # 13. Semantic execution first
@@ -856,15 +891,9 @@ Example:
 interface AgentPlatformAdapter<Element> {
   reveal?(element: Element): Promise<void>;
 
-  invoke?(
-    element: Element,
-    action: string,
-    args: unknown
-  ): Promise<unknown>;
+  invoke?(element: Element, action: string, args: unknown): Promise<unknown>;
 
-  observe?(
-    element: Element
-  ): Promise<Record<string, unknown>>;
+  observe?(element: Element): Promise<Record<string, unknown>>;
 }
 ```
 
@@ -963,12 +992,12 @@ Do not hide failures behind generic exceptions.
 Create structured runtime errors where useful:
 
 ```ts
-CapabilityNotFoundError
-CapabilityDisabledError
-UnsupportedActionError
-ConstraintViolationError
-InvocationFailedError
-StaleObservationError
+CapabilityNotFoundError;
+CapabilityDisabledError;
+UnsupportedActionError;
+ConstraintViolationError;
+InvocationFailedError;
+StaleObservationError;
 ```
 
 Recommended loop behavior:

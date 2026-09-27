@@ -19,12 +19,60 @@ Actour 不以维护所有 React renderer 的官方 adapter 为目标。框架提
 ## 仓库结构
 
 - `packages/core`：平台无关的注册表与交互事件
+- `packages/agent`：Actour tools、审批桥接与 `pi-agent-core` 集成
 - `packages/react-native`：Provider 和组件适配
 - `packages/taro`：Taro adapter 编写示例（reference/demo，非正式支持平台）
 - `packages/guide`：Guide 定义与 overlay
 - `packages/devtools`：应用内节点检查器
 - `apps/rn_example`：React Native 官方 adapter 的闹钟示范工程
 - `apps/taro_example`：项目内编写 Taro adapter 的闹钟示范工程
+- `apps/self_drivable_example`：React Native 多页面 Self-Drivable App 示范工程
+
+## Agent Runtime MVP
+
+Self-Drivable 示例验证一条完整的语义执行链路：Agent 观察当前页面，调用应用
+公开的 capability，经过 React Navigation 切换页面并重新观察，在提交请假前
+暂停等待用户批准，最后通过 completion criterion 验证任务完成。整个流程不使用
+截图、坐标点击或业务专用 Skill。
+
+```bash
+pnpm install
+pnpm agent:start
+```
+
+示例使用 `pi-agent-core` 负责模型会话、工具调用循环和事件流，Actour 只提供
+`actour_observe`、`actour_invoke`、`actour_complete` 三个语义工具以及审批桥接。
+OpenAI 模型与 Responses API 传输由 `pi-ai` 提供，不在 Actour 内重复实现 Agent
+Loop。先复制 `apps/self_drivable_example/.env.example` 为 `.env`，填写
+`EXPO_PUBLIC_OPENAI_API_KEY` 和当前项目可用的 `EXPO_PUBLIC_OPENAI_MODEL`。
+直接把 API key 放进 React Native/Web bundle 只适合本地 MVP；生产环境应通过
+服务端代理，并用 `baseURL` 指向代理。运行 `pnpm agent:test` 可验证能力生命周期、
+过期 observation、参数校验、审批阻断和多页面完整任务。
+
+使用 DeepSeek 时配置 `EXPO_PUBLIC_ACTOUR_MODEL_PROVIDER=deepseek`、
+`EXPO_PUBLIC_DEEPSEEK_API_KEY`、`EXPO_PUBLIC_DEEPSEEK_MODEL=deepseek-flash`
+和 `EXPO_PUBLIC_DEEPSEEK_BASE_URL=https://api.deepseek.com`。模型请求失败、
+中止或只返回文本而未调用工具时，具体原因会进入 Agent Trace，不再静默结束。
+
+Debugger 是 `@actour/core` 的跨包能力，调试输出默认关闭。Provider 的 `debug`
+是整套 Actour Runtime 的统一开关；Core Registry、Semantic Runtime、Guide、Agent
+和 adapter 共享同一个 controller。作用域 logger 会在每次调用时读取最新组件
+上下文、活动页面和 observation version：
+
+```tsx
+<ActourProvider debug={__DEV__}>
+  <App />
+</ActourProvider>
+
+function SubmitButton() {
+  const scope = useActourDebugScope({ component: "SubmitButton" });
+  scope.debugger.log("pressed", { requestId: "draft" });
+  return null;
+}
+```
+
+`debug={false}`（默认值）时，`debugger.log(...)` 不会调用 `console`。
+`console` 调用只存在于 Core debugger 内，各 package 不应自行判断 flag 或直接输出。
 
 ## 平台适配
 

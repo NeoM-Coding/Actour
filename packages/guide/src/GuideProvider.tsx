@@ -10,7 +10,7 @@ import React, {
 import type { InteractionEvent, InteractionRect } from "@actour/core";
 import type { GuideDefinition } from "./types";
 import type { GuidePlatformAdapter } from "./platform";
-import { useActour } from "./registryContext";
+import { useActour, useActourDebugScope } from "./registryContext";
 
 interface GuideController {
   start: (guide: GuideDefinition) => void;
@@ -41,6 +41,13 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
   const [overlayRect, setOverlayRect] = useState<InteractionRect>();
   const transitioningRef = useRef(false);
   const step = guide?.steps[index];
+  const debugScope = useActourDebugScope({
+    package: "guide",
+    component: "GuideProvider",
+    guideId: guide?.id ?? null,
+    stepIndex: step ? index : null,
+    target: step?.target ?? null,
+  });
   const target = step ? registry.get(step.target) : undefined;
   const targetReady =
     !entering &&
@@ -62,9 +69,13 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
       setGuide(null);
       setEntering(false);
       setOverlayRect(undefined);
+      debugScope.debugger.log("guide finished", {
+        guideId: current?.id ?? null,
+        reason,
+      });
       current?.onFinish?.(reason);
     },
-    [],
+    [debugScope],
   );
 
   const advance = useCallback(
@@ -72,17 +83,23 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
       if (!guide || !step || transitioningRef.current) return;
       transitioningRef.current = true;
       setEntering(true);
+      debugScope.debugger.log("guide step advancing", {
+        guideId: guide.id,
+        index,
+        event,
+      });
       try {
         await step.revoke?.({ reason: "advance", event });
         if (index + 1 < guide.steps.length) setIndex(index + 1);
         else finish("completed");
-      } catch {
+      } catch (error) {
+        debugScope.debugger.log("guide step advance failed", error);
         setEntering(false);
       } finally {
         transitioningRef.current = false;
       }
     },
-    [finish, guide, index, step],
+    [debugScope, finish, guide, index, step],
   );
 
   const exit = useCallback(
@@ -104,6 +121,10 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
   const controller = useMemo<GuideController>(
     () => ({
       start: (definition) => {
+        debugScope.debugger.log("guide started", {
+          guideId: definition.id,
+          steps: definition.steps.length,
+        });
         guideRef.current = definition;
         transitioningRef.current = false;
         setEntering(true);
@@ -116,7 +137,7 @@ export function GuideProvider({ children, adapter }: GuideProviderProps) {
           void exit("cancelled");
       },
     }),
-    [exit],
+    [debugScope, exit],
   );
 
   // Registry 不是 React state，内部变化不会自动触发 React 渲染。

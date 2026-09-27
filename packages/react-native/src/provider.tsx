@@ -1,1 +1,6 @@
-export { ActourProvider, useActour } from "@actour/guide";
+export {
+  ActourProvider,
+  useActour,
+  useActourRuntime,
+  useActourDebugScope,
+} from "@actour/guide";

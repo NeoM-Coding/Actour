@@ -1,18 +1,37 @@
 import type { InteractionEvent, InteractionNode } from "./types";
+import {
+  silentActourDebugger,
+  type ActourDebugScope,
+  type ActourScopedDebugger,
+} from "./debugger";
 
 // 回调函数
 type Listener = () => void;
 type EventListener = (event: InteractionEvent) => void;
 
 function sameNode(a: InteractionNode, b: InteractionNode) {
-  return a.role === b.role && a.label === b.label && a.visible === b.visible &&
-    a.enabled === b.enabled && a.actions.length === b.actions.length &&
+  return (
+    a.role === b.role &&
+    a.label === b.label &&
+    a.visible === b.visible &&
+    a.enabled === b.enabled &&
+    a.actions.length === b.actions.length &&
     a.actions.every((action, index) => action === b.actions[index]) &&
-    a.rect?.x === b.rect?.x && a.rect?.y === b.rect?.y &&
-    a.rect?.width === b.rect?.width && a.rect?.height === b.rect?.height;
+    a.rect?.x === b.rect?.x &&
+    a.rect?.y === b.rect?.y &&
+    a.rect?.width === b.rect?.width &&
+    a.rect?.height === b.rect?.height
+  );
 }
 
 export class InteractionRegistry {
+  private readonly debugScope: ActourDebugScope;
+
+  constructor(
+    debuggerInstance: ActourScopedDebugger = silentActourDebugger,
+  ) {
+    this.debugScope = { debugger: debuggerInstance };
+  }
   // 交互元数据独立于 React 组件树保存。这样 Guide、Devtools 和未来的 Bridge
   // 可以观察同一份交互信息，但不会接管应用自己的业务状态。
   private nodes = new Map<string, InteractionNode>();
@@ -25,11 +44,13 @@ export class InteractionRegistry {
 
   register(node: InteractionNode, measure?: () => void) {
     if (!node.id.trim()) throw new Error("Interaction ID must not be empty");
-    if (this.nodes.has(node.id)) throw new Error(`Interaction ID already registered: ${node.id}`);
+    if (this.nodes.has(node.id))
+      throw new Error(`Interaction ID already registered: ${node.id}`);
     const owner = Symbol(node.id);
     this.owners.set(node.id, owner);
     this.nodes.set(node.id, { ...node, actions: [...node.actions] });
     if (measure) this.measurements.set(node.id, measure);
+    this.debugScope.debugger.log("interaction registered", { id: node.id });
     this.notify();
     return {
       update: (patch: Partial<InteractionNode>) => {
@@ -44,6 +65,7 @@ export class InteractionRegistry {
         };
         if (sameNode(current, next)) return;
         this.nodes.set(node.id, next);
+        this.debugScope.debugger.log("interaction updated", { id: node.id });
         this.notify();
       },
       unregister: () => {
@@ -51,6 +73,7 @@ export class InteractionRegistry {
         this.owners.delete(node.id);
         this.measurements.delete(node.id);
         this.nodes.delete(node.id);
+        this.debugScope.debugger.log("interaction unregistered", { id: node.id });
         this.notify();
       },
     };
@@ -86,6 +109,7 @@ export class InteractionRegistry {
   }
 
   emit(event: InteractionEvent) {
+    this.debugScope.debugger.log("interaction emitted", event);
     this.eventListeners.forEach((listener) => listener(event));
   }
 

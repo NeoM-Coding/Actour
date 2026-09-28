@@ -61,6 +61,8 @@ export interface PiActourRunOptions {
   onTrace?(entry: AgentTraceEntry): void;
   /** Receives the exact model-visible transcript as messages finish. */
   onChatMessage?(message: AgentChatMessage, history: AgentChatMessage[]): void;
+  /** Receives the compacted transcript that is actually sent to the model. */
+  onModelContext?(history: AgentChatMessage[]): void;
 }
 
 export interface PiActourAgentOptions {
@@ -92,6 +94,7 @@ export interface OpenAIActourAgentOptions {
 export class AgentSession {
   readonly history: AgentTraceEntry[] = [];
   readonly chatHistory: AgentChatMessage[] = [];
+  modelContext: AgentChatMessage[] = [];
   done = false;
   constructor(readonly goal: string) {}
 }
@@ -130,6 +133,74 @@ export function toAgentChatMessage(message: unknown): AgentChatMessage {
     model: typeof source.model === "string" ? source.model : undefined,
     usage: source.usage,
   };
+}
+
+function observationDetails(message: Record<string, unknown>) {
+  if (message.role !== "toolResult" || message.toolName !== "actour_observe")
+    return undefined;
+  const details = message.details;
+  return details && typeof details === "object"
+    ? (details as Record<string, unknown>)
+    : undefined;
+}
+
+function isStandaloneToolResult(messages: unknown[], resultIndex: number) {
+  const result = messages[resultIndex] as Record<string, unknown> | undefined;
+  const toolCallId = result?.toolCallId;
+  if (typeof toolCallId !== "string") return false;
+  for (let index = resultIndex - 1; index >= 0; index -= 1) {
+    const candidate = messages[index] as Record<string, unknown> | undefined;
+    if (candidate?.role !== "assistant" || !Array.isArray(candidate.content))
+      continue;
+    const calls = candidate.content.filter(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        (item as Record<string, unknown>).type === "toolCall",
+    ) as Array<Record<string, unknown>>;
+    if (calls.some((call) => call.id === toolCallId)) return calls.length === 1;
+  }
+  return false;
+}
+
+export function compactActourContext(messages: unknown[], goal: string): unknown[] {
+  let checkpointIndex = -1;
+  let checkpoint: Record<string, unknown> | undefined;
+  messages.forEach((message, index) => {
+    if (!message || typeof message !== "object") return;
+    const details = observationDetails(message as Record<string, unknown>);
+    if (
+      details?.mode === "full" &&
+      details.reason !== "initial" &&
+      details.snapshot &&
+      isStandaloneToolResult(messages, index)
+    ) {
+      checkpointIndex = index;
+      checkpoint = details;
+    }
+  });
+  if (checkpointIndex < 0 || !checkpoint) return messages;
+  const timestampSource = messages[checkpointIndex] as
+    | Record<string, unknown>
+    | undefined;
+  const compacted = {
+    role: "user",
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          type: "actour-checkpoint",
+          goal,
+          observation: checkpoint,
+        }),
+      },
+    ],
+    timestamp:
+      typeof timestampSource?.timestamp === "number"
+        ? timestampSource.timestamp
+        : Date.now(),
+  };
+  return [compacted, ...messages.slice(checkpointIndex + 1)];
 }
 
 const INVOKE_PARAMETERS = Type.Object({
@@ -188,6 +259,15 @@ export class PiActourAgent {
       },
       streamFn: this.options.streamFn,
       getApiKey: this.options.getApiKey,
+      transformContext: async (messages) => {
+        const transformed = compactActourContext(messages, goal);
+        session.modelContext = [
+          { role: "system", content: ACTOUR_META_SKILL },
+          ...transformed.map(toAgentChatMessage),
+        ];
+        options.onModelContext?.([...session.modelContext]);
+        return transformed;
+      },
       toolExecution: "sequential",
     });
     chat({ role: "system", content: ACTOUR_META_SKILL });
@@ -239,14 +319,14 @@ export class PiActourAgent {
           "Read the active page, enabled capabilities, constraints and completion state. Call this before invoking and after every state change.",
         parameters: Type.Object({}),
         execute: async () => {
-          const observation = await this.compiler.compile();
-          this.executor.beginCycle(observation);
+          const { payload, snapshot } = await this.compiler.compile();
+          this.executor.beginCycle(snapshot);
           trace({
             type: "observation",
-            message: `Observe ${observation.page?.id ?? "no-page"} v${observation.version}`,
-            data: observation,
+            message: `${payload.mode} observe ${snapshot.page?.id ?? "no-page"} v${payload.version}`,
+            data: payload,
           });
-          return this.result(observation);
+          return this.result(payload);
         },
       },
       {
@@ -271,6 +351,13 @@ export class PiActourAgent {
               approved,
             );
           }
+          if (
+            (result.status === "executed" &&
+              (result.cycleBarrier || result.commit === "unconfirmed")) ||
+            result.status === "rejected"
+          ) {
+            this.compiler.invalidate("barrier");
+          }
           trace({ type: "tool-result", message: result.status, data: result });
           return this.result(result);
         },
@@ -283,6 +370,17 @@ export class PiActourAgent {
         parameters: Type.Object({ message: Type.String() }),
         execute: async (_id, params) => {
           const { message } = params as { message: string };
+          const latest = this.compiler.getLatestSnapshot();
+          if (!latest || latest.version !== this.runtime.currentVersion) {
+            throw new Error(
+              "Completion rejected: call actour_observe for the latest semantic version",
+            );
+          }
+          if (!latest.completion.some((item) => item.satisfied)) {
+            throw new Error(
+              "Completion rejected: the latest observation has no satisfied criterion",
+            );
+          }
           const observation = await this.runtime.observe();
           const satisfied = observation.completion.some((item) => item.satisfied);
           if (!satisfied) {

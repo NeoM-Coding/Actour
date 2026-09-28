@@ -825,6 +825,25 @@ must call `actour_get_time` for goals containing “today”, “tomorrow”, we
 or similar expressions. The tool returns the ISO instant plus local date, time,
 weekday, timezone, and locale.
 
+## 12.2 Incremental observation and checkpoint context
+
+Core always owns a complete authoritative observation. Each Agent Session keeps
+its own compiler checkpoint: the first observation is full, same-page observations
+are deltas, and a barrier or page change produces a new full checkpoint. Page state
+uses a shallow field patch; descriptor collections use ID-based add/update/remove
+deltas. Applications declare required business inputs with `PageRequirement`, so
+the model receives pending requirements instead of inferring missing values.
+
+Action execution does not itself increment the semantic version. The executor waits
+for a real PageContext, capability, constraint, guide, completion registration, or
+active-page change. A timeout returns an unconfirmed receipt and never replays the
+action automatically.
+
+Raw session history remains available for audit. Before provider requests,
+pi-agent-core `transformContext` replaces completed pre-barrier tool-call/result
+pairs with a synthetic checkpoint containing the original goal and latest full
+observation. This reduces model context without deleting developer-visible history.
+
 ---
 
 # 13. Semantic execution first

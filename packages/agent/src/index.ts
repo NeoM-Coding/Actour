@@ -1,5 +1,12 @@
 export { ACTOUR_META_SKILL } from "./meta-skill";
 export { ActourContextCompiler } from "./compiler";
+export type {
+  CollectionDelta,
+  CompiledObservation,
+  CompiledObservationResult,
+  FullObservationReason,
+  GuideFlowDescriptor,
+} from "./compiler";
 export {
   ACTOUR_TOOLS,
   ApprovalController,
@@ -9,6 +16,7 @@ export {
 export type {
   ApprovalRequest,
   ToolExecutionResult,
+  ToolExecutionReceipt,
   ActourToolProvider,
   ActourTimeContext,
   ExecutionPresentationMode,
@@ -20,6 +28,7 @@ export {
   createOpenAIActourAgent,
   createDeepSeekActourAgent,
   toAgentChatMessage,
+  compactActourContext,
 } from "./pi-agent";
 export type {
   AgentTraceEntry,

@@ -28,7 +28,7 @@ export const ACTOUR_TOOLS = [
   {
     name: "actour_observe",
     description:
-      "Observe the current Actour page, capabilities, guidance and constraints.",
+      "Observe the current Actour page. Returns a full checkpoint initially or after a barrier, otherwise a same-page semantic delta.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -88,6 +88,8 @@ export interface ExecutionPresentationOptions {
   prepareMs?: number;
   /** Time for committed state feedback before advancing. */
   settleMs?: number;
+  /** Maximum wait for an observable semantic commit after callback execution. */
+  commitTimeoutMs?: number;
   sleep?: (milliseconds: number) => Promise<void>;
 }
 
@@ -155,10 +157,26 @@ export class ApprovalController {
   }
 }
 
+export interface ToolExecutionReceipt {
+  status: "executed";
+  target: string;
+  action: string;
+  versionBefore: number;
+  versionAfter: number;
+  commit: "confirmed" | "unconfirmed";
+  cycleBarrier: boolean;
+  result?: unknown;
+}
+
 export type ToolExecutionResult =
-  | { status: "executed"; result: unknown }
+  | ToolExecutionReceipt
   | { status: "approval-required"; request: ApprovalRequest }
-  | { status: "rejected" };
+  | {
+      status: "rejected";
+      target: string;
+      action: string;
+      cycleBarrier: true;
+    };
 
 export class ToolExecutor {
   private readonly ajv = new Ajv({ allErrors: true, strict: false });
@@ -190,10 +208,7 @@ export class ToolExecutor {
     const capability = this.runtime.getCapability(invocation.target);
     const action = capability.actions[invocation.action];
     if (!action)
-      return {
-        status: "executed",
-        result: await this.runtime.invoke(invocation),
-      };
+      throw new UnsupportedActionError(invocation.target, invocation.action);
     const validate = this.ajv.compile(action.inputSchema);
     if (!validate(invocation.arguments)) {
       throw new InvalidArgumentsError(
@@ -216,8 +231,12 @@ export class ToolExecutor {
         ),
       };
     }
-    const result = await this.executePresented(invocation, capability.metadata);
-    if (cycleAction?.cycleBarrier) this.closeCycle();
+    const result = await this.executePresented(
+      invocation,
+      capability.metadata,
+      cycleAction?.cycleBarrier === true,
+    );
+    if (result.cycleBarrier || result.commit === "unconfirmed") this.closeCycle();
     return result;
   }
 
@@ -226,10 +245,15 @@ export class ToolExecutor {
     approved: boolean,
   ): Promise<ToolExecutionResult> {
     if (!approved) {
-      this.approvals.reject(id);
+      const pending = this.approvals.take(id);
       this.debugScope.debugger.log("agent tool approval rejected", { id });
       this.closeCycle();
-      return { status: "rejected" };
+      return {
+        status: "rejected",
+        target: pending.invocation.target,
+        action: pending.invocation.action,
+        cycleBarrier: true,
+      };
     }
     this.debugScope.debugger.log("agent tool approval granted", { id });
     const pending = this.approvals.take(id);
@@ -238,8 +262,9 @@ export class ToolExecutor {
     const result = await this.executePresented(
       pending.invocation,
       capability.metadata,
+      cycleAction?.cycleBarrier === true,
     );
-    if (cycleAction?.cycleBarrier) this.closeCycle();
+    if (result.cycleBarrier || result.commit === "unconfirmed") this.closeCycle();
     return result;
   }
 
@@ -280,9 +305,28 @@ export class ToolExecutor {
   private async executePresented(
     invocation: CapabilityInvocation,
     metadata?: Record<string, unknown>,
-  ): Promise<{ status: "executed"; result: unknown }> {
+    cycleBarrier = false,
+  ): Promise<ToolExecutionReceipt> {
+    const executeAndConfirm = async () => {
+      const versionBefore = this.runtime.currentVersion;
+      const businessResult = await this.invoke(invocation);
+      const confirmed = await this.runtime.waitForVersionAfter(
+        versionBefore,
+        this.presentation.commitTimeoutMs ?? 1500,
+      );
+      return {
+        status: "executed" as const,
+        target: invocation.target,
+        action: invocation.action,
+        versionBefore,
+        versionAfter: this.runtime.currentVersion,
+        commit: confirmed ? ("confirmed" as const) : ("unconfirmed" as const),
+        cycleBarrier,
+        ...(businessResult === undefined ? {} : { result: businessResult }),
+      };
+    };
     if (this.presentation.mode !== "progressive") {
-      return { status: "executed", result: await this.invoke(invocation) };
+      return executeAndConfirm();
     }
     const sleep =
       this.presentation.sleep ??
@@ -301,10 +345,10 @@ export class ToolExecutor {
     await sleep(this.presentation.prepareMs ?? 100);
     this.runtime.setAgentExecutionState({ ...state, phase: "executing" });
     try {
-      const result = await this.invoke(invocation);
+      const result = await executeAndConfirm();
       this.runtime.setAgentExecutionState({ ...state, phase: "committed" });
       await sleep(this.presentation.settleMs ?? 180);
-      return { status: "executed", result };
+      return result;
     } catch (error) {
       this.runtime.setAgentExecutionState({ ...state, phase: "failed" });
       await sleep(this.presentation.settleMs ?? 180);

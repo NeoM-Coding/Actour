@@ -75,6 +75,7 @@ export class Agent {
     getApiKey?: (
       provider: string,
     ) => string | undefined | Promise<string | undefined>;
+    transformContext?: (messages: unknown[]) => Promise<unknown[]>;
     toolExecution: "sequential" | "parallel";
   });
   subscribe(listener: (event: AgentEvent) => void): () => void;

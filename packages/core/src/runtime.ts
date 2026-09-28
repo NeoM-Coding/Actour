@@ -24,6 +24,10 @@ import {
 
 type Listener = () => void;
 
+function structurallyEqual(left: unknown, right: unknown) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 interface Owned<T> {
   owner: symbol;
   value: T;
@@ -224,7 +228,6 @@ export class ActourRuntime {
       throw new UnsupportedActionError(invocation.target, invocation.action);
     try {
       const result = await action.execute(invocation.arguments);
-      this.changed();
       this.debugScope.debugger.log("capability invocation completed", {
         target: invocation.target,
         action: invocation.action,
@@ -304,6 +307,24 @@ export class ActourRuntime {
     return observation;
   }
 
+  waitForVersionAfter(version: number, timeoutMs = 1500): Promise<boolean> {
+    if (this.version > version) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (changed: boolean) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        unsubscribe();
+        resolve(changed);
+      };
+      const unsubscribe = this.subscribe(() => {
+        if (this.version > version) finish(true);
+      });
+      const timer = setTimeout(() => finish(false), Math.max(0, timeoutMs));
+    });
+  }
+
   private registerOwned<T>(
     map: Map<string, Owned<T>>,
     id: string,
@@ -317,6 +338,8 @@ export class ActourRuntime {
     return {
       update: (next) => {
         if (map.get(id)?.owner !== owner) return;
+        const current = map.get(id)?.value;
+        if (structurallyEqual(current, next)) return;
         map.set(id, { owner, value: next });
         this.changed();
       },

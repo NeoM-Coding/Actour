@@ -9,6 +9,22 @@
 模型会话、多轮 tool-call、工具结果回灌和事件生命周期由
 `pi-agent-core` 负责，Actour 不实现另一套 Agent Loop。
 
+## Full、Delta 与 Checkpoint
+
+单次 Agent Session 的第一次 `actour_observe` 返回完整 snapshot；同一页面后续
+observe 只返回 Page state、capability、constraint 与 completion 的变化。页面通过
+`PageContext.requirements` 明确声明必填业务条件，模型只接收尚未满足的 requirement
+和本轮刚解决的 ID。
+
+`cycleBarrier` 执行、审批拒绝或 commit 无法确认后，下一次 observe 强制生成新的
+full checkpoint。pi-agent-core 的 `transformContext` 会在 barrier checkpoint 后压缩
+旧页面消息；`AgentSession.chatHistory` 仍保留完整审计记录，`modelContext` 表示实际
+发送给模型的压缩上下文。
+
+业务 callback 执行后，ToolExecutor 默认等待最多 1500ms，直到 Runtime 观察到
+PageContext 或 capability 的语义版本变化。超时返回 `commit: "unconfirmed"`，不会
+自动重放 action。可用 `executionPresentation.commitTimeoutMs` 调整上限。
+
 ## OpenAI
 
 ```ts

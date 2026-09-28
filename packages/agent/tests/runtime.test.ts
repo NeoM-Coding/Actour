@@ -151,9 +151,86 @@ describe("ActourRuntime", () => {
 });
 
 describe("ToolExecutor", () => {
-  it("presents progressive phases without changing observation versions", async () => {
+  it("waits for an asynchronous semantic commit", async () => {
+    const runtime = new ActourRuntime();
+    const page = runtime.registerPage({ id: "form", state: { value: "" } });
+    runtime.setActivePage("form");
+    runtime.registerCapability({
+      id: "form.value",
+      pageId: "form",
+      description: "Value",
+      actions: {
+        input: {
+          inputSchema: VALUE_SCHEMA,
+          execute: () => {
+            setTimeout(
+              () => page.update({ id: "form", state: { value: "done" } }),
+              5,
+            );
+          },
+        },
+      },
+    });
+    const observation = await runtime.observe();
+    const executor = new ToolExecutor(runtime, undefined, undefined, {
+      commitTimeoutMs: 100,
+    });
+    executor.beginCycle(observation);
+
+    const result = await executor.execute({
+      target: "form.value",
+      action: "input",
+      arguments: { value: "done" },
+      observationVersion: observation.version,
+    });
+
+    expect(result).toMatchObject({
+      status: "executed",
+      commit: "confirmed",
+      versionBefore: observation.version,
+      versionAfter: observation.version + 1,
+    });
+  });
+
+  it("reports an unconfirmed commit without replaying the callback", async () => {
     const runtime = new ActourRuntime();
     runtime.registerPage({ id: "form" });
+    runtime.setActivePage("form");
+    const execute = vi.fn();
+    runtime.registerCapability({
+      id: "form.noop",
+      pageId: "form",
+      description: "Noop",
+      actions: { press: { inputSchema: EMPTY_OBJECT_SCHEMA, execute } },
+    });
+    const observation = await runtime.observe();
+    const executor = new ToolExecutor(runtime, undefined, undefined, {
+      commitTimeoutMs: 0,
+    });
+    executor.beginCycle(observation);
+
+    const result = await executor.execute({
+      target: "form.noop",
+      action: "press",
+      arguments: {},
+      observationVersion: observation.version,
+    });
+
+    expect(result).toMatchObject({ status: "executed", commit: "unconfirmed" });
+    expect(execute).toHaveBeenCalledOnce();
+    await expect(
+      executor.execute({
+        target: "form.noop",
+        action: "press",
+        arguments: {},
+        observationVersion: observation.version,
+      }),
+    ).rejects.toBeInstanceOf(CycleBarrierError);
+  });
+
+  it("presents progressive phases without changing observation versions", async () => {
+    const runtime = new ActourRuntime();
+    const page = runtime.registerPage({ id: "form", state: { reason: "" } });
     runtime.setActivePage("form");
     runtime.registerCapability({
       id: "form.reason",
@@ -161,7 +238,10 @@ describe("ToolExecutor", () => {
       description: "Reason",
       metadata: { presentationTarget: "form.reason.input" },
       actions: {
-        input: { inputSchema: VALUE_SCHEMA, execute: () => undefined },
+        input: {
+          inputSchema: VALUE_SCHEMA,
+          execute: () => page.update({ id: "form", state: { reason: "rest" } }),
+        },
       },
     });
     const phases: Array<string | null> = [];
@@ -200,7 +280,9 @@ describe("ToolExecutor", () => {
 
   it("shares an observation lease until a cycle barrier closes it", async () => {
     const runtime = new ActourRuntime();
-    runtime.registerPage({ id: "form" });
+    let state: Record<string, unknown> = {};
+    const page = runtime.registerPage({ id: "form", state });
+    runtime.registerPage({ id: "other" });
     runtime.setActivePage("form");
     const setFirst = vi.fn();
     const setSecond = vi.fn();
@@ -210,17 +292,36 @@ describe("ToolExecutor", () => {
       pageId: "form",
       description: "Form actions",
       actions: {
-        first: { inputSchema: VALUE_SCHEMA, execute: setFirst },
-        second: { inputSchema: VALUE_SCHEMA, execute: setSecond },
+        first: {
+          inputSchema: VALUE_SCHEMA,
+          execute: (input) => {
+            setFirst(input);
+            state = { ...state, first: input };
+            page.update({ id: "form", state });
+          },
+        },
+        second: {
+          inputSchema: VALUE_SCHEMA,
+          execute: (input) => {
+            setSecond(input);
+            state = { ...state, second: input };
+            page.update({ id: "form", state });
+          },
+        },
         next: {
           inputSchema: EMPTY_OBJECT_SCHEMA,
           cycleBarrier: true,
-          execute: navigate,
+          execute: () => {
+            navigate();
+            runtime.setActivePage("other");
+          },
         },
       },
     });
     const observation = await runtime.observe();
-    const executor = new ToolExecutor(runtime);
+    const executor = new ToolExecutor(runtime, undefined, undefined, {
+      commitTimeoutMs: 0,
+    });
     executor.beginCycle(observation);
     const invoke = (action: string, args: unknown) =>
       executor.execute({
@@ -259,7 +360,9 @@ describe("ToolExecutor", () => {
         },
       },
     });
-    const executor = new ToolExecutor(runtime);
+    const executor = new ToolExecutor(runtime, undefined, undefined, {
+      commitTimeoutMs: 0,
+    });
     const version = runtime.currentVersion;
     await expect(
       executor.execute({
@@ -300,7 +403,9 @@ describe("ToolExecutor", () => {
         },
       },
     });
-    const executor = new ToolExecutor(runtime);
+    const executor = new ToolExecutor(runtime, undefined, undefined, {
+      commitTimeoutMs: 0,
+    });
     const pending = await executor.execute({
       target: "form.submit",
       action: "press",
@@ -345,8 +450,11 @@ describe("ToolExecutor", () => {
     });
     if (pending.status !== "approval-required")
       throw new Error("Expected approval");
-    expect(await executor.resolveApproval(pending.request.id, false)).toEqual({
+    expect(await executor.resolveApproval(pending.request.id, false)).toMatchObject({
       status: "rejected",
+      target: "form.submit",
+      action: "press",
+      cycleBarrier: true,
     });
     expect(execute).not.toHaveBeenCalled();
   });

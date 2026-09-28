@@ -28,6 +28,7 @@ export type {
   Capability,
   CapabilityActionDescriptor,
   CapabilityDescriptor,
+  PageRequirement,
   PageContext,
   Constraint,
   GuideFlow,

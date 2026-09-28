@@ -84,11 +84,19 @@ export interface CapabilityDescriptor {
   metadata?: Record<string, unknown>;
 }
 
+export interface PageRequirement {
+  id: string;
+  description: string;
+  satisfied: boolean;
+  capabilityId?: string;
+}
+
 export interface PageContext {
   id: string;
   title?: string;
   description?: string;
   state?: Record<string, unknown>;
+  requirements?: PageRequirement[];
   metadata?: Record<string, unknown>;
 }
 

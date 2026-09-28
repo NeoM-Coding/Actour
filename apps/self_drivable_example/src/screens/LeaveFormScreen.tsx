@@ -88,6 +88,26 @@ export function LeaveFormScreen() {
       title: "请假申请",
       description: "填写请假日期、时段和原因",
       state: { date, daypart, reason, valid },
+      requirements: [
+        {
+          id: "leave.date-required",
+          description: "请假日期已填写",
+          capabilityId: "leave.date",
+          satisfied: Boolean(date),
+        },
+        {
+          id: "leave.daypart-required",
+          description: "请假时段已选择",
+          capabilityId: "leave.daypart",
+          satisfied: Boolean(daypart),
+        },
+        {
+          id: "leave.reason-required",
+          description: "请假原因已填写",
+          capabilityId: "leave.reason",
+          satisfied: Boolean(reason.trim()),
+        },
+      ],
     }),
     [date, daypart, reason, valid],
   );

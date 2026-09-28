@@ -67,6 +67,8 @@ export function AgentPanel() {
   const [goal, setGoal] = useState("帮我申请明天下午的假，因为参加学校活动");
   const [trace, setTrace] = useState<AgentTraceEntry[]>([]);
   const [chatHistory, setChatHistory] = useState<AgentChatMessage[]>([]);
+  const [modelContext, setModelContext] = useState<AgentChatMessage[]>([]);
+  const [historyMode, setHistoryMode] = useState<"raw" | "model">("raw");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
@@ -76,6 +78,7 @@ export function AgentPanel() {
     if (running) return;
     setTrace([]);
     setChatHistory([]);
+    setModelContext([]);
     setRunning(true);
     try {
       if (!modelConfig.apiKey || !modelConfig.model) {
@@ -109,6 +112,7 @@ export function AgentPanel() {
       await agent.run(goal, {
         onTrace: (entry) => setTrace((items) => [...items, entry]),
         onChatMessage: (_message, history) => setChatHistory(history),
+        onModelContext: setModelContext,
         requestApproval: (request) =>
           new Promise<boolean>((resolve) => {
             approvalResolver.current = resolve;
@@ -166,7 +170,7 @@ export function AgentPanel() {
       </ScrollView>
       <View style={panel.historyRow}>
         <Text style={panel.historySummary}>
-          本次会话 {chatHistory.length} 条消息
+          Raw {chatHistory.length} · Model {modelContext.length}
         </Text>
         <Pressable
           style={panel.historyButton}
@@ -198,17 +202,35 @@ export function AgentPanel() {
                 <Text style={panel.historyCloseText}>关闭</Text>
               </Pressable>
             </View>
-            <ScrollView style={panel.historyScroll}>
-              {chatHistory.map((message, index) => (
-                <View
-                  key={`${message.timestamp ?? 0}-${index}`}
-                  style={panel.messageCard}
+            <View style={panel.historyTabs}>
+              {(["raw", "model"] as const).map((mode) => (
+                <Pressable
+                  key={mode}
+                  style={[
+                    panel.historyTab,
+                    historyMode === mode && panel.historyTabActive,
+                  ]}
+                  onPress={() => setHistoryMode(mode)}
                 >
-                  <Text style={panel.messageText} selectable>
-                    {formatChatMessage(message, index)}
+                  <Text style={panel.historyTabText}>
+                    {mode === "raw" ? "Raw History" : "Model Context"}
                   </Text>
-                </View>
+                </Pressable>
               ))}
+            </View>
+            <ScrollView style={panel.historyScroll}>
+              {(historyMode === "raw" ? chatHistory : modelContext).map(
+                (message, index) => (
+                  <View
+                    key={`${message.timestamp ?? 0}-${index}`}
+                    style={panel.messageCard}
+                  >
+                    <Text style={panel.messageText} selectable>
+                      {formatChatMessage(message, index)}
+                    </Text>
+                  </View>
+                ),
+              )}
             </ScrollView>
           </View>
         </View>
@@ -319,6 +341,15 @@ const panel = StyleSheet.create({
   },
   historyCloseText: { color: "#DCE2F7", fontSize: 12, fontWeight: "700" },
   historyScroll: { flex: 1 },
+  historyTabs: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  historyTab: {
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 9,
+    backgroundColor: "#1A2239",
+  },
+  historyTabActive: { backgroundColor: "#3A4B83" },
+  historyTabText: { color: "#DCE2F7", fontSize: 11, fontWeight: "700" },
   messageCard: {
     marginBottom: 10,
     padding: 12,
